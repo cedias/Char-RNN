@@ -67,8 +67,11 @@ class RNN(nn.Module):
 class CharRNN(): 
 
   
-    def __init__(self,filename,load=None, hidden_size=25, n_layers=1,rnn_cell=nn.LSTM):
+    def __init__(self,filename,load=None,device='cpu', hidden_size=350, n_layers=1,rnn_cell=nn.LSTM):
         self.model = RNN( hidden_size, n_layers=1,rnn_cell=nn.RNN)
+        self.device = device
+        self.model.to(device)
+
         self.file = unidecode.unidecode(open(filename).read()) #clean text => only ascii
         self.file_len = len(self.file)
         self.checkpoint_file = "charnn.chkpt"
@@ -122,7 +125,7 @@ class CharRNN():
 
     # Turn string into list of longs
     def char_tensor(self,string):
-        tensor = torch.zeros(1,len(string)).long()
+        tensor = torch.zeros(1,len(string),device=self.device).long()
         for c in range(len(string)):
             tensor[0,c] = all_characters.index(string[c])
         return tensor
@@ -160,10 +163,10 @@ class CharRNN():
         return loss.data.item() 
 
 
-    def train(self,epochs=1,chunk_len=80,batch_size=16, print_each=100):
+    def train(self,epochs=1,chunk_len=110,batch_size=16, print_each=100):
         self.model_optimizer= torch.optim.Adam(self.model.parameters())
 
-        with tqdm(total=epochs,desc=f"training") as pbar:
+        with tqdm(total=epochs,desc=f"training - chunks of len {chunk_len}") as pbar:
 
             for epoch in range(1, epochs + 1):
                 loss = self.train_one(*self.random_training_set(chunk_len,batch_size))  #train on one chunk
@@ -188,7 +191,7 @@ class CharRNN():
 if __name__ == "__main__":
     crnn = CharRNN("input.txt")
     crnn.load("charnn.chkpt")
-    for chk_len in range(2,1000):
-        crnn.train(1000,chunk_len=chk_len) # train for X epochs
-    crnn.generate()
-    #crnn.save("x")
+    #for chklen in range(500,1500):
+    crnn.train(100000) # train for X epochs
+    print(crnn.generate())
+    crnn.save("model_350")
