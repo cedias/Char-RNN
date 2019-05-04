@@ -122,7 +122,7 @@ class CharRNN():
     #Maps the file to a tensor of longs
     def file2tensor(self):
         all_characters = string.printable
-        return torch.LongTensor([all_characters.index(x) for x in self.file],device=self.device)#,dtype=torch.Long())
+        return torch.LongTensor([all_characters.index(x) for x in self.file]).to(device)#,dtype=torch.Long())
 
     #creates chunks
     def training_set_tensor(self,chunk_len):
