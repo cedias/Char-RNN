@@ -51,7 +51,7 @@ class RNN(nn.Module):
         """
         input = self.embed(input)
         output,_  = self.rnn(input)
-        output = self.predict(f.tanh(output))
+        output = self.predict(output)
         return output
     
     def forward_seq(self, input,hidden=None):
@@ -60,7 +60,7 @@ class RNN(nn.Module):
         """
         input = self.embed(input)
         output,hidden  = self.rnn(input.unsqueeze(0),hidden)
-        output = self.predict(f.tanh(output))
+        output = self.predict(output)
         return output,hidden
       
     
@@ -193,12 +193,14 @@ class CharRNN():
                     pbar.update(1)
                     pbar.set_postfix({"loss":loss})
 
+                    if iters > iterations:
+                        break
 
 if __name__ == "__main__":
     crnn = CharRNN("input.txt")
     print(crnn.training_set_tensor(100))
     crnn.load("charnn.chkpt")
     #for chklen in range(500,1500):
-    crnn.train(1000) # train for X epochs
+    crnn.train(100) # train for X epochs
     print(crnn.generate())
     crnn.save("model_350")
