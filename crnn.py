@@ -167,15 +167,13 @@ class CharRNN():
     def train(self,iterations=1,chunk_len=110,batch_size=16, print_each=100):
         self.model_optimizer= torch.optim.Adam(self.model.parameters())
         train_file = self.training_set_tensor(chunk_len) 
-        data = DataLoader(train_file, batch_size=batch_size,shuffle=True).__iter__()
+        data = DataLoader(train_file, batch_size=batch_size,shuffle=True)
         iters = 0
 
         while (iters <= iterations):
 
             with tqdm(total=iterations,desc=f"training - chunks of len {chunk_len}") as pbar:
-
                 for t in data:
-                    t = next(data)
                     tr,te = t[:,:-1].contiguous(),t[:,1:].contiguous()
 
                     loss = self.train_one(tr,te)  #train on one chunk
