@@ -15,6 +15,8 @@ import random
 import re
 import torch
 import torch.nn as nn
+from torch.utils.data import DataLoader
+from torch.utils.data.sampler import RandomSampler
 
 all_characters = string.printable
 n_characters = len(all_characters)
@@ -74,6 +76,7 @@ class CharRNN():
 
         self.file = unidecode.unidecode(open(filename).read()) #clean text => only ascii
         self.file_len = len(self.file)
+        self.tensor_file = self.file2tensor()
         self.checkpoint_file = "charnn.chkpt"
         print('file_len =', self.file_len)
 
@@ -116,11 +119,17 @@ class CharRNN():
 
     ########## DATA ##########
 
-    #Get a piece of text
-    def random_chunk(self,chunk_len):
-        start_index = random.randint(0, self.file_len - chunk_len-1)
-        end_index = start_index + chunk_len + 1
-        return self.file[start_index:end_index]
+    #Maps the file to a tensor of longs
+    def file2tensor(self):
+        all_characters = string.printable
+        return torch.LongTensor([all_characters.index(x) for x in self.file],device=self.device)#,dtype=torch.Long())
+
+    #creates chunks
+    def training_set_tensor(self,chunk_len):
+        remains = self.tensor_file.size(0)%(chunk_len+1)
+        view = self.tensor_file[:-remains].view(-1,chunk_len+1)
+        return view
+        
 
 
     # Turn string into list of longs
@@ -130,14 +139,6 @@ class CharRNN():
             tensor[0,c] = all_characters.index(string[c])
         return tensor
 
-
-    #Turn a piece of text in train/test
-    def random_training_set(self,chunk_len=200, batch_size=8):
-        chunks = [self.random_chunk(chunk_len) for _ in range(batch_size)]
-        inp = torch.cat([self.char_tensor(chunk[:-1]) for chunk in chunks],dim=0)
-        target = torch.cat([self.char_tensor(chunk[1:]) for chunk in chunks],dim=0)
-        
-        return inp, target
 
     #### Training ####
     
@@ -163,35 +164,44 @@ class CharRNN():
         return loss.data.item() 
 
 
-    def train(self,epochs=1,chunk_len=110,batch_size=16, print_each=100):
+    def train(self,iterations=1,chunk_len=110,batch_size=16, print_each=100):
         self.model_optimizer= torch.optim.Adam(self.model.parameters())
+        train_file = self.training_set_tensor(chunk_len) 
+        data = DataLoader(train_file, batch_size=batch_size,shuffle=True).__iter__()
+        iters = 0
 
-        with tqdm(total=epochs,desc=f"training - chunks of len {chunk_len}") as pbar:
+        while (iters <= iterations):
 
-            for epoch in range(1, epochs + 1):
-                loss = self.train_one(*self.random_training_set(chunk_len,batch_size))  #train on one chunk
+            with tqdm(total=iterations,desc=f"training - chunks of len {chunk_len}") as pbar:
 
-                if epoch % print_each == 0:
-                    self.save(self.checkpoint_file)
-                    print("-"*25)
-                    print(f"Generated text at epoch {epoch}")
-                    print("-"*25)
-                    print(self.generate(temperature=0.9))
-                    print("-"*25)
-                    print(f"model-checkpointed in {self.checkpoint_file}")
-                    print("")
+                for t in data:
+                    t = next(data)
+                    tr,te = t[:,:-1].contiguous(),t[:,1:].contiguous()
 
-                    
+                    loss = self.train_one(tr,te)  #train on one chunk
 
+                    if iters % print_each == 0:
+                        self.save(self.checkpoint_file)
+                        print("-"*25)
+                        print(f"Generated text at iter {iters}")
+                        print("-"*25)
+                        print(self.generate(temperature=0.9))
+                        print("-"*25)
+                        print(f"model-checkpointed in {self.checkpoint_file}")
+                        print("")
 
-                pbar.update(1)
-                pbar.set_postfix({"loss":loss})
+                        
+
+                    iters += 1
+                    pbar.update(1)
+                    pbar.set_postfix({"loss":loss})
 
 
 if __name__ == "__main__":
     crnn = CharRNN("input.txt")
+    print(crnn.training_set_tensor(100))
     crnn.load("charnn.chkpt")
     #for chklen in range(500,1500):
-    crnn.train(100000) # train for X epochs
+    crnn.train(1000) # train for X epochs
     print(crnn.generate())
     crnn.save("model_350")
