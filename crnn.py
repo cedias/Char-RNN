@@ -170,9 +170,8 @@ class CharRNN():
         data = DataLoader(train_file, batch_size=batch_size,shuffle=True)
         iters = 0
 
-        while (iters <= iterations):
-
-            with tqdm(total=iterations,desc=f"training - chunks of len {chunk_len}") as pbar:
+        with tqdm(total=iterations,desc=f"training - chunks of len {chunk_len}") as pbar:
+            while (iters < iterations):
                 for t in data:
                     tr,te = t[:,:-1].contiguous(),t[:,1:].contiguous()
 
