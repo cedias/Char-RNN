@@ -134,7 +134,7 @@ class CharRNN():
         torch.save(self.model.state_dict(), path)
 
     def load(self,path):
-        self.model.load_state_dict(torch.load(path))
+        self.model.load_state_dict(torch.load(path,map_location=self.device))
 
 
     #### GENERATION #####
@@ -245,7 +245,7 @@ class CharRNN():
                         break
 
 if __name__ == "__main__":
-    crnn = CharRNN("input.txt",device="cuda:0",rnn_cell=nn.LSTM)
+    crnn = CharRNN("input.txt",device="cpu",rnn_cell=nn.LSTM)
     #print(crnn.training_set_tensor(100))
     crnn.load("charnn.chkpt")
     #for chklen in range(64,100):
