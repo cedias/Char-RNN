@@ -1,4 +1,4 @@
-# Just another Pytorch Char-RNN
+# Just another Pytorch Char-RNN - This one is just behind a class for ease of use :)
 ------
 
 ## Requirements:
